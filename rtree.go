@@ -1,44 +1,37 @@
 package hrtree
 
-import "errors"
+import (
+	"math"
+)
 
-type boundingRect struct {
-}
-
-// TODO: This should be something that is geojson BBOX esque. Anything that can have a bbox can be stored in an RTree
-type BBoxable interface {
-	Width() int64
-	Height() int64
-	X() float64
-	Y() float64
-}
+const defaultFillFactor = 0.4
+const defaultMaxEntries = 4
+const defaultMinEntries = 2
 
 type RTree struct {
-	root boundingRect
-	max  int64
+	root              *Node
+	max               int64
+	min               int64
+	count             int64
+	defaultFillFactor float64
 }
 
-func NewRTree(root boundingRect, max int64) *RTree {
-	return &RTree{root: root, max: max}
+func NewRTree(_max int64) *RTree {
+	_max = int64(math.Max(defaultMaxEntries, float64(_max)))
+	_min := int64(math.Max(defaultMinEntries, math.Ceil(float64(_max)+defaultFillFactor)))
+
+	rt := &RTree{
+		max:               _max,
+		min:               _min,
+		defaultFillFactor: defaultFillFactor,
+	}
+
+	rt.Clear()
+
+	return rt
 }
 
-func (rt *RTree) insert(geom BBoxable) error {
-	if geom.X() < 0 {
-		return errors.New("expected x coordinate to be greater or equal to 0")
-	}
-
-	if geom.Y() < 0 {
-		return errors.New("expected y coordinate to be greater or equal to 0")
-	}
-
-	if geom.Height() < 0 {
-		return errors.New("expected height to be greater or equal to 0")
-	}
-
-	if geom.Width() < 0 {
-		return errors.New("expected width to be greater or equal to 0")
-	}
-
+func (rt *RTree) Insert(geom BBoxable) error {
 	// Step 1: Create a bounding rectangle from the input
 	// Step 2: If this tree is empty, as in no root node, create a root node.
 	// Step 3: Start walking down the tree from root node. Start from the root node.
@@ -46,5 +39,19 @@ func (rt *RTree) insert(geom BBoxable) error {
 	// If it does not have a leaf node, expand the current bounding rectangle of this node to fit the geometry.
 	// Find whether the leaf node needs to be updated.
 
+	rt.insert(geom, rt.root.height)
+	rt.count++
+
 	return nil
+}
+
+func (rt *RTree) Clear() {
+	rt.root = NewNode(make([]BBoxable, 0), 0)
+	rt.count = 0
+}
+
+func (rt *RTree) insert(geom BBoxable, depth int32) {
+	// Step 1: Create a bounding rectangle from the input
+	// Step 2: If this tree is empty, as in no root node, create a root node.
+	// Step 3: Start walking down the tree from root node. Start from the root node.
 }
